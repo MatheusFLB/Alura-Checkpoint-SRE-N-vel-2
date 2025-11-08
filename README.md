@@ -1,14 +1,14 @@
-#### Alura Checkpoint SRE Nível 2.
-#### Instalação do Docker e Minikube.
-#### Configuração do kubectl para gerenciar cluster Kubernetes.
-#### Instalação do Helm para gerenciar pacotes no Kubernetes.
-#### Configuração do Istio para gerenciar a segurança e o tráfego de rede.
-#### Utilização do Visual Studio Code para editar arquivos YAML e scripts.
-#### Utilização do Postman para testar APIs e endpoints da aplicação.
+# <span style="color:red;">Alura Checkpoint SRE Nível 2</span>
+#### Instalação do Docker e Minikube;
+#### Configuração do kubectl para gerenciar cluster Kubernetes;
+#### Instalação do Helm para gerenciar pacotes no Kubernetes;
+#### Configuração do Istio para gerenciar a segurança e o tráfego de rede;
+#### Utilização do Visual Studio Code para editar arquivos YAML e scripts;
+#### Utilização do Postman para testar APIs e endpoints da aplicação;
 #### Atividade executada em uma VM Ubuntu Server com 4 CPU's e 4096Gb de memória RAM.
 
-# Instalação do Docker e Minikube
-# INSTALAR DOCKER
+# <span style="color:red;">Instalação do Docker e Minikube no Kubernetes</span>
+## INSTALAR DOCKER
 https://docs.docker.com/engine/install/ubuntu/
 ### Set up Docker's apt repository
 ```
@@ -42,7 +42,7 @@ newgrp docker
 ```
 docker system info
 ```
-# INSTALAR MINIKUBE
+## INSTALAR MINIKUBE
 https://minikube.sigs.k8s.io/docs/start/?arch=%2Flinux%2Fx86-64%2Fstable%2Fbinary+download
 ### instalar minikube
 ```
@@ -65,7 +65,7 @@ minikube status
 ```
 minikube profile list
 ```
-# Configuração do kubectl para gerenciar cluster Kubernetes
+# <span style="color:red;">Configuração do kubectl para gerenciar cluster Kubernetes</span>
 https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 ### instalar kubectl
 ```
@@ -130,7 +130,7 @@ echo "======================================="
 chmod +x verify-cluster.sh
 ./verify-cluster.sh
 ```
-# Instalação do Helm para gerenciar pacotes no Kubernetes
+# <span style="color:red;">Instalação do Helm para gerenciar pacotes no Kubernetes</span>
 https://helm.sh/docs/intro/install/
 ### instalação do helm
 ```
