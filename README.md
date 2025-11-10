@@ -84,7 +84,7 @@ minikube kubectl -- config view
 kubectl config use-context minikube
 ```
 ### script para verificação do ambiente minikube
-## verify-cluster.sh
+## <span style="color:yellow;">verify-cluster.sh</span>
 ```
 #!/bin/bash
 echo "======================================="
@@ -125,7 +125,7 @@ kubectl top nodes || echo "⚠️  Métricas indisponíveis (Metrics Server pode
 echo -e "\n✅ Diagnóstico concluído"
 echo "======================================="
 ```
-## torna executável e executa
+## <span style="color:green;">torna executável e executa</span>
 ```
 chmod +x verify-cluster.sh
 ./verify-cluster.sh
@@ -335,7 +335,7 @@ helm list
 kubectl get all
 ```
 ### script para verificação da implementação por helm
-## verify-helm-deployment.sh
+## <span style="color:yellow;">verify-helm-deployment.sh</span>
 ```
 #!/bin/bash
 # ============================================================
@@ -435,6 +435,11 @@ success "✅ Verificação completa concluída com sucesso"
 echo "==========================================="
 
 ```
+## <span style="color:green;">torna executável e executa</span>
+```
+chmod +x verify-helm-deployment.sh
+./verify-helm-deployment.sh
+```
 # <span style="color:red;">Configuração do Istio para gerenciar a segurança e o tráfego de rede</span>
 ### adicionar o repositório oficial do Istio
 ```
@@ -487,7 +492,7 @@ kubectl get svc --all-namespaces | grep istio
 kubectl get crds | grep istio.io
 ```
 ### script para verificação do istio
-## verify-istio-installation.sh
+## <span style="color:yellow;">verify-istio-installation.sh</span>
 ```
 #!/bin/bash
 
@@ -517,7 +522,7 @@ kubectl get crd | grep istio | wc -l
 
 echo -e "\n=== VERIFICATION COMPLETE ==="
 ```
-## torna executável e executa
+## <span style="color:green;">torna executável e executa</span>
 ```
 chmod +x verify-istio-installation.sh
 ./verify-istio-installation.sh
@@ -712,7 +717,7 @@ helm upgrade techsafe-demo ./techsafe-app
 kubectl get pods
 ```
 ### script para verificação da aplicação
-## verify-sre-setup.sh
+## <span style="color:yellow;">verify-sre-setup.sh</span>
 ```
 #!/bin/bash
 
@@ -754,7 +759,7 @@ kubectl exec -it $(kubectl get pods -l app=techsafe-demo-backend -o name | head 
 
 echo -e "\n=== VERIFICAÇÃO COMPLETA ==="
 ```
-## torna executável e executa
+## <span style="color:green;">torna executável e executa</span>
 ```
 chmod +x verify-sre-setup.sh
 ./verify-sre-setup.sh
