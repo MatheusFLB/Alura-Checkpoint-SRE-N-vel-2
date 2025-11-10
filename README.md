@@ -3,7 +3,7 @@
 #### Configuração do kubectl para gerenciar cluster Kubernetes;
 #### Instalação do Helm para gerenciar pacotes no Kubernetes;
 #### Configuração do Istio para gerenciar a segurança e o tráfego de rede;
-#### Utilização do Visual Studio Code para editar arquivos YAML e scripts;
+#### Utilização do Visual Studio Code por SSH para editar arquivos YAML e scripts;
 #### Utilização do Postman para testar APIs e endpoints da aplicação;
 #### Atividade executada em uma VM Ubuntu Server com 4 CPU's e 4096Gb de memória RAM.
 
@@ -435,22 +435,20 @@ success "✅ Verificação completa concluída com sucesso"
 echo "==========================================="
 
 ```
-# <span style="color:red;">ISTIO com HELM (ficaram algumas dúvidas sobre essa parte)</span>
+# <span style="color:red;">Configuração do Istio para gerenciar a segurança e o tráfego de rede</span>
 ### adicionar o repositório oficial do Istio
 ```
 helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 ```
-### criar namespace para o Istio
+### criar namespaces para o istio
 ```
 kubectl create namespace istio-system
 kubectl create namespace istio-ingress
 ```
-### instalar o chart base do Istio (CRDs)
+### instalar o chart base do istio (CRDs)
 ```
 helm install istio-base istio/base -n istio-system
-ou
-helm install istio-base istio/base -n istio-system --set defaultRevision=default
 ```
 ### instalar o istiod (control plane)
 ```
@@ -461,14 +459,13 @@ helm install istiod istio/istiod -n istio-system --wait
 helm ls -n istio-system
 kubectl get pods -n istio-system -w
 ```
-### 
+### instalar o gateway istio-ingress
 ```
-# comando original que não funcionou
-helm install istio-ingress istio/gateway -n istio-ingress --wait
-# comando original que não funcionou com logs
-helm install istio-ingress istio/gateway -n istio-ingress --wait --debug
-# comando que funcionou com logs, o erro é que não tem loadbalancer
+# comando para subir sem loadbalancer
 helm install istio-ingress istio/gateway -n istio-ingress --wait --set service.type=NodePort --debug
+
+# comando para subir com loadbalancer
+helm install istio-ingress istio/gateway -n istio-ingress --wait --debug
 ```
 ### VERIFICA istio-ingress
 ```
@@ -488,4 +485,285 @@ kubectl delete namespace istio-ingress
 kubectl get pods --all-namespaces | grep istio
 kubectl get svc --all-namespaces | grep istio
 kubectl get crds | grep istio.io
+```
+### script para verificação do istio
+## verify-istio-installation.sh
+```
+#!/bin/bash
+
+echo "=== ISTIO INSTALLATION VERIFICATION ==="
+
+echo -e "\n1. Helm Releases:"
+helm ls -A | grep istio
+
+echo -e "\n2. Istio System Pods:"
+kubectl get pods -n istio-system
+
+echo -e "\n3. Istio Ingress Pods:"
+kubectl get pods -n istio-ingress
+
+echo -e "\n4. Application Pods with Sidecars:"
+kubectl get pods -o wide | grep techsafe-demo
+
+echo -e "\n5. Istio Services:"
+kubectl get svc -n istio-system
+kubectl get svc -n istio-ingress
+
+echo -e "\n6. Istio Injection Status:"
+kubectl get namespace -L istio-injection
+
+echo -e "\n7. Istio CRDs:"
+kubectl get crd | grep istio | wc -l
+
+echo -e "\n=== VERIFICATION COMPLETE ==="
+```
+## torna executável e executa
+```
+chmod +x verify-istio-installation.sh
+./verify-istio-installation.sh
+```
+# <span style="color:red;">Garantir disponibilidade e backups automatizados</span>
+## Configurar Liveness Probes nos Deployments
+## Atualize o techsafe-app/templates/deployment-frontend.yaml
+```
+# techsafe-app/templates/deployment-frontend.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.appName }}-frontend
+  labels:
+    app: {{ .Values.global.appName }}-frontend
+    environment: {{ .Values.global.environment }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.global.appName }}-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.appName }}-frontend
+        environment: {{ .Values.global.environment }}
+    spec:
+      containers:
+      - name: frontend
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - containerPort: 80
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 12 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.appName }}-frontend-service
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+  - port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.targetPort }}
+  selector:
+    app: {{ .Values.global.appName }}-frontend
+```
+## Atualize o techsafe-app/templates/deployment-backend.yaml
+```
+# techsafe-app/templates/deployment-backend.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.appName }}-backend
+  labels:
+    app: {{ .Values.global.appName }}-backend
+    environment: {{ .Values.global.environment }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.global.appName }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.appName }}-backend
+        environment: {{ .Values.global.environment }}
+    spec:
+      containers:
+      - name: backend
+        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        ports:
+        - containerPort: 6379
+        command: ["redis-server"]
+        args: ["--save", "60", "1", "--loglevel", "warning"]
+        resources:
+          {{- toYaml .Values.backend.resources | nindent 12 }}
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.appName }}-backend-service
+spec:
+  type: {{ .Values.backend.service.type }}
+  ports:
+  - port: {{ .Values.backend.service.port }}
+    targetPort: {{ .Values.backend.service.targetPort }}
+  selector:
+    app: {{ .Values.global.appName }}-backend
+```
+## Crie um novo template techsafe-app/templates/cronjob-backup.yaml
+```
+# techsafe-app/templates/cronjob-backup.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.global.appName }}-redis-backup
+  labels:
+    app: {{ .Values.global.appName }}-backup
+    environment: {{ .Values.global.environment }}
+spec:
+  schedule: "{{ .Values.backup.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: redis:7.2
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Starting Redis backup at $(date)"
+              
+              # Criar backup usando redis-cli
+              redis-cli -h {{ .Values.global.appName }}-backend-service SAVE
+              
+              # Copiar dump.rdb para local
+              redis-cli -h {{ .Values.global.appName }}-backend-service --rdb /tmp/dump-$(date +%Y%m%d-%H%M%S).rdb
+              
+              # Verificar se o backup foi criado
+              ls -la /tmp/dump-*.rdb
+              echo "Backup completed successfully at $(date)"
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /tmp
+          restartPolicy: OnFailure
+          volumes:
+          - name: backup-storage
+            emptyDir: {}
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+```
+## Atualize o techsafe-app/values.yaml para incluir configurações de backup
+```
+# Adicione esta seção ao values.yaml existente
+backup:
+  schedule: "*/5 * * * *"  # A cada 5 minutos para teste
+  # Para produção use: "0 2 * * *" (diariamente às 2AM)
+```
+### Aplique as mudanças no cluster
+```
+# navegar para o diretório do Helm chart
+cd ~/techsafe-helm-demo
+
+# atualizar a release com as novas configurações
+helm upgrade techsafe-demo ./techsafe-app
+
+# verificar a implantação
+kubectl get pods
+```
+### script para verificação da aplicação
+## verify-sre-setup.sh
+```
+#!/bin/bash
+
+echo "=== VERIFICAÇÃO SRE - DISPONIBILIDADE E BACKUPS ==="
+
+echo -e "\n1. Status dos Pods e Probes:"
+kubectl get pods -o wide
+
+echo -e "\n2. Verificar Liveness Probes:"
+kubectl describe pods -l app=techsafe-demo-frontend | grep -A 10 "Liveness"
+kubectl describe pods -l app=techsafe-demo-backend | grep -A 10 "Liveness"
+
+echo -e "\n3. Verificar CronJobs:"
+kubectl get cronjobs
+
+echo -e "\n4. Verificar Jobs de Backup:"
+kubectl get jobs
+
+echo -e "\n5. Logs dos Últimos Backups:"
+JOB_POD=$(kubectl get pods --sort-by=.metadata.creationTimestamp | grep techsafe-demo-redis-backup | tail -1 | awk '{print $1}')
+if [ -n "$JOB_POD" ]; then
+  echo "Logs do último backup ($JOB_POD):"
+  kubectl logs $JOB_POD
+else
+  echo "Nenhum job de backup encontrado ainda."
+fi
+
+echo -e "\n6. Eventos do Cluster:"
+kubectl get events --sort-by=.metadata.creationTimestamp | tail -10
+
+echo -e "\n7. Testar Disponibilidade dos Serviços:"
+kubectl port-forward service/techsafe-demo-frontend-service 8080:80 &
+sleep 2
+curl -s http://localhost:8080 > /dev/null && echo "✅ Frontend respondendo" || echo "❌ Frontend offline"
+pkill -f "port-forward"
+
+echo -e "\n8. Testar Conexão com Backend:"
+kubectl exec -it $(kubectl get pods -l app=techsafe-demo-backend -o name | head -1) -- redis-cli ping
+
+echo -e "\n=== VERIFICAÇÃO COMPLETA ==="
+```
+## torna executável e executa
+```
+chmod +x verify-sre-setup.sh
+./verify-sre-setup.sh
+```
+# <span style="color:red;">PARA TESTES DE CONECTIVIDADE EM APICAÇÕES COMO O POSTMAN</span>
+```
+# expor o frontend temporariamente para teste
+kubectl port-forward service/techsafe-demo-frontend-service 8080:80
+
+# testar o acesso
+curl http://localhost:8080
 ```
