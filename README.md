@@ -122,7 +122,7 @@ kubectl get svc -n kube-system
 echo -e "\n=== 8. Verificando Capacidade e Uso de Recursos ==="
 kubectl top nodes || echo "⚠️  Métricas indisponíveis (Metrics Server pode não estar instalado)."
 
-echo -e "\n✅ Diagnóstico concluído!"
+echo -e "\n✅ Diagnóstico concluído"
 echo "======================================="
 ```
 ## torna executável e executa
@@ -426,12 +426,66 @@ kubectl get svc --no-headers | awk '{print "• " $1 "\t" $3 "\t" $4 ":" $5}'
 echo -e "\n→ Deployments:"
 kubectl get deploy --no-headers | awk '{print "• " $1 "\t" $2 " disponíveis de " $3}'
 
-success "\n✅ Cluster TechSafe Demo verificado com sucesso!"
+success "\n✅ Cluster TechSafe Demo verificado com sucesso"
 echo "==========================================="
 
 # ---------- Conclusão ----------
 echo -e "\n==========================================="
-success "✅ Verificação completa concluída com sucesso!"
+success "✅ Verificação completa concluída com sucesso"
 echo "==========================================="
 
+```
+# <span style="color:red;">ISTIO com HELM (ficaram algumas dúvidas sobre essa parte)</span>
+### adicionar o repositório oficial do Istio
+```
+helm repo add istio https://istio-release.storage.googleapis.com/charts
+helm repo update
+```
+### criar namespace para o Istio
+```
+kubectl create namespace istio-system
+kubectl create namespace istio-ingress
+```
+### instalar o chart base do Istio (CRDs)
+```
+helm install istio-base istio/base -n istio-system
+ou
+helm install istio-base istio/base -n istio-system --set defaultRevision=default
+```
+### instalar o istiod (control plane)
+```
+helm install istiod istio/istiod -n istio-system --wait
+```
+### VERIFICA istio-system
+```
+helm ls -n istio-system
+kubectl get pods -n istio-system -w
+```
+### 
+```
+# comando original que não funcionou
+helm install istio-ingress istio/gateway -n istio-ingress --wait
+# comando original que não funcionou com logs
+helm install istio-ingress istio/gateway -n istio-ingress --wait --debug
+# comando que funcionou com logs, o erro é que não tem loadbalancer
+helm install istio-ingress istio/gateway -n istio-ingress --wait --set service.type=NodePort --debug
+```
+### VERIFICA istio-ingress
+```
+helm ls -n istio-ingress
+```
+### LIMPA O ISTIO PARA TENTAR NOVAMENTE
+```
+helm uninstall istio-ingress -n istio-ingress
+helm uninstall istiod -n istio-system
+helm uninstall istio-base -n istio-system
+
+kubectl get crds | grep 'istio.io' | awk '{print $1}' | xargs kubectl delete crd
+
+kubectl delete namespace istio-system
+kubectl delete namespace istio-ingress
+
+kubectl get pods --all-namespaces | grep istio
+kubectl get svc --all-namespaces | grep istio
+kubectl get crds | grep istio.io
 ```
