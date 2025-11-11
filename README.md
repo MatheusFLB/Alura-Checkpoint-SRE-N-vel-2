@@ -772,3 +772,11 @@ kubectl port-forward service/techsafe-demo-frontend-service 8080:80
 # testar o acesso
 curl http://localhost:8080
 ```
+# para testar o acesso por palicações como postman, usar os seguintes comandos
+```
+# expor o frontend temporariamente para teste
+kubectl port-forward service/techsafe-demo-frontend-service 8080:80 --address <ip do host>
+
+# testar o acesso
+get http://<ip do host>:8080
+```
